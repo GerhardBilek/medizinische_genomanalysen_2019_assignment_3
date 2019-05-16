@@ -2,9 +2,9 @@
 
 import vcf
 import httplib2
+import json
 
-__author__ = 'XXX'
-
+__author__ = 'Gerhard Bilek'
 
 ##
 ##
@@ -25,8 +25,9 @@ class Assignment3:
         print("PyVCF version: %s" % vcf.VERSION)
         
         ## Call annotate_vcf_file here
-        self.vcf_path = ""  # TODO
+        self.vcf_path = "chr16.vcf"  # TODO
 
+    @property
     def annotate_vcf_file(self):
         '''
         - Annotate the VCF file using the following example code (for 1 variant)
@@ -55,51 +56,82 @@ class Assignment3:
         
         ## Build the parameters using the list we just built
         params = 'ids=' + ",".join(params_pos) + '&hg38=true'
-        
+
+        #print("Params_Pos: ", params_pos)
+        #print("Params: ", params)
+
         ## Perform annotation
         res, con = h.request('http://myvariant.info/v1/variant', 'POST', params, headers=headers)
         annotation_result = con.decode('utf-8')
-        
-        ## TODO now do something with the 'annotation_result'
-        
-        ##
-        ## End example code
-        ##
-        
-        return None  ## return the data structure here
+
+        ## Generate json object
+        jsonobject = json.loads(annotation_result)
+
+        return(jsonobject)
     
-    
-    def get_list_of_genes(self):
+    def get_list_of_genes(self, jsonobject):
         '''
         Print the name of genes in the annotation data set
         :return:
         '''
-        print("TODO")
-    
-    
-    def get_num_variants_modifier(self):
+        for object in jsonobject:
+            if 'cadd' in object:
+                if 'genename' in object['cadd']['gene']:
+                    print(object['cadd']['gene']['genename'])
+
+        #for object in jsonobject:
+        #    if 'dbsnp' in object:
+        #        if 'genename' in object['dbsnp']['gene']:
+        #           print(object['dbsnp']['gene']['genename'])
+
+    def get_num_variants_modifier(self, jsonobject):
         '''
         Print the number of variants with putative_impact "MODIFIER"
         :return:
         '''
-        print("TODO")
-        
-    
-    def get_num_variants_with_mutationtaster_annotation(self):
+
+        '''
+        for object in jsonobject:
+            if 'cadd' in object:
+                if 'putative_impact' in object['ann']:
+                #if 'putative_impact' in object:
+                    print("boom")
+        '''
+        counter = 0
+        for object in jsonobject:
+            if 'snpeff' in object:          # (???) snpeff , cadd
+                key, value = "putative_impact", "MODIFIER"
+                if key in object['snpeff']['ann'] and value == object['snpeff']['ann']['putative_impact']:
+                    counter += 1
+        return(counter)
+
+    def get_num_variants_with_mutationtaster_annotation(self, jsonobject):
         '''
         Print the number of variants with a 'mutationtaster' annotation
         :return:
         '''
-        print("TODO")
+        counter = 0
+        for object in jsonobject:
+            if 'dbnsfp' in object:
+                if 'mutationtaster' in object['dbnsfp']:
+                    counter+=1
+        return(counter)
         
     
-    def get_num_variants_non_synonymous(self):
+    def get_num_variants_non_synonymous(self, jsonobject):
         '''
         Print the number of variants with 'consequence' 'NON_SYNONYMOUS'
         :return:
         '''
-        print("TODO")
-        
+
+        counter = 0
+        for object in jsonobject:
+            if 'cadd' in object:
+                key, value = "consequence", "NON_SYNONYMOUS"
+                if key in object['cadd'] and value == object['cadd']['consequence']:    # value  muss bis zum Key definiert werden.
+                    counter += 1
+        return counter
+
     
     def view_vcf_in_browser(self):
         '''
@@ -107,16 +139,27 @@ class Assignment3:
         - Upload the VCF file and investigate the details
         :return:
         '''
-   
+
         ## Document the final URL here
-        print("TODO")
-            
+        print("The vcf file has been compressed and indexed via iTabixIt.app. The two resulting files, the compressed file (gz) and the index file (gz.tbi) were uploaded to https://vcf.iobio.io/")
+        print("Resutls: https://vcf.iobio.io/?species=Human&build=GRCh38")
     
     def print_summary(self):
-        self.annotate_vcf_file()
-        print("Print all results here")
-    
-    
+        annoData = self.annotate_vcf_file   # Syntax? Warum ohne Klammern??
+        #for object in annoData: print(object)    # json objects
+        print()
+        print("List of Genes:")             # 9
+        self.get_list_of_genes(annoData)
+        print()
+        print("Num of Modifier: ", self.get_num_variants_modifier(annoData)) # 4
+        print()
+        print("Num of Mutationtaster: ", self.get_num_variants_with_mutationtaster_annotation(annoData)) #5
+        print()
+        print("Num of nonSynonymous: ", self.get_num_variants_non_synonymous(annoData))
+        print()
+        print(self.view_vcf_in_browser())
+        print()
+
 def main():
     print("Assignment 3")
     assignment3 = Assignment3()
